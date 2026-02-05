@@ -14,6 +14,9 @@ import {
   TableRow,
   Box,
   TextField,
+  useTheme,
+  useMediaQuery,
+  Stack,
 } from "@mui/material";
 import { LogContext } from "../Context";
 
@@ -24,6 +27,8 @@ function LogsTable() {
   if (!context) return null;
 
   const { logs, setSelectedLog } = context;
+  const theme = useTheme();
+  const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
 
   const formatDate = useCallback(
     (timestamp: string) => new Date(timestamp).toLocaleDateString(),
@@ -113,12 +118,14 @@ function LogsTable() {
           log.module.toLowerCase().includes(lowerFilter) ||
           log.eventCode.toLowerCase().includes(lowerFilter) ||
           (filterValue.toUpperCase() === "RESOLVED" && log.resolved) ||
-          (filterValue.toUpperCase() === "UNRESOLVED" && !log.resolved)
+          (filterValue.toUpperCase() === "UNRESOLVED" && !log.resolved),
       );
     }
 
     if (selectedDate) {
-      items = items.filter((log) => formatToInputDate(log.timestamp) === selectedDate);
+      items = items.filter(
+        (log) => formatToInputDate(log.timestamp) === selectedDate,
+      );
     }
 
     return items;
@@ -152,16 +159,27 @@ function LogsTable() {
             </span>
             No Logs Found
           </h1>
-          <p className="text-blue-900 mt-2 font-semibold text-lg bg-red-100 w-[400px] mx-auto p-4 rounded-lg">
-            No logs match the search term: "{filterValue}"
-            <Button
-              sx={{ ml: 2, marginTop: 2 }}
-              variant="outlined"
-              onClick={() => setFilterValue("")}
-            >
-              Clear Filter
-            </Button>
-          </p>
+          <Box
+            sx={{
+              mt: 2,
+              fontWeight: 600,
+              fontSize: { xs: "0.95rem", md: "1.125rem" },
+              backgroundColor: "#fee2e2",
+              color: "#0f172a",
+              width: { xs: "100%", sm: "400px" },
+              mx: "auto",
+              p: 2,
+              borderRadius: 2,
+              textAlign: "center",
+            }}
+          >
+            <Box component="span" sx={{ display: "block", wordBreak: "break-word" }}>
+              No logs match the search term: "{filterValue}"
+            </Box>
+            <Box sx={{ mt: 2 }}>
+              <Button variant="outlined" onClick={() => setFilterValue("")}>Clear Filter</Button>
+            </Box>
+          </Box>
         </Box>
       </Box>
     );
@@ -185,187 +203,284 @@ function LogsTable() {
           </Box>
 
           <Box className="p-4 bg-gray-50 border-b border-gray-200">
-            <TextField
-              fullWidth
-              label="Search Logs (ID, Source, Message, Type, Host, IP, Environment, Module, Event Code)"
-              placeholder="Type to search..."
-              variant="outlined"
-              value={filterValue}
-              onChange={handleSearch}
-              sx={{
-                "& .MuiOutlinedInput-root": {
-                  backgroundColor: "white",
-                  "&:hover fieldset": {
-                    borderColor: "#1e40af",
-                  },
-                  "&.Mui-focused fieldset": {
-                    borderColor: "#1e40af",
-                  },
-                },
-              }}
-            />
+            <Stack
+              direction={{ xs: "column", md: "row" }}
+              spacing={2}
+              alignItems="center"
+              justifyContent="space-between"
+            >
+              <Box className="flex-1 min-w-0 w-full">
+                <TextField
+                  fullWidth
+                  label="Search Logs"
+                  placeholder="Type to search..."
+                  variant="outlined"
+                  value={filterValue}
+                  onChange={handleSearch}
+                  size="small"
+                  sx={{
+                    "& .MuiOutlinedInput-root": {
+                      backgroundColor: "white",
+                      "&:hover fieldset": {
+                        borderColor: "#1e40af",
+                      },
+                      "&.Mui-focused fieldset": {
+                        borderColor: "#1e40af",
+                      },
+                    },
+                  }}
+                />
+              </Box>
+
+              <Stack
+                direction={{ xs: "column", sm: "row" }}
+                spacing={1}
+                alignItems="center"
+              >
+                <Stack
+                  direction="row"
+                  spacing={1}
+                  flexWrap="wrap"
+                  justifyContent={{
+                    xs: "flex-start",
+                    sm: "flex-start",
+                    md: "flex-start",
+                  }}
+                >
+                  <Button
+                    sx={{
+                      borderRadius: "20px",
+                      height: 36,
+                      minWidth: { xs: 72, sm: 84 },
+                    }}
+                    size="small"
+                    variant="contained"
+                    color="primary"
+                    onClick={() => handleFilterClick("INFO")}
+                  >
+                    Info
+                  </Button>
+                  <Button
+                    sx={{
+                      borderRadius: "20px",
+                      height: 36,
+                      minWidth: { xs: 72, sm: 84 },
+                    }}
+                    size="small"
+                    variant="contained"
+                    color="error"
+                    onClick={() => handleFilterClick("ERROR")}
+                  >
+                    Error
+                  </Button>
+                  <Button
+                    sx={{
+                      borderRadius: "20px",
+                      height: 36,
+                      minWidth: { xs: 72, sm: 84 },
+                    }}
+                    size="small"
+                    variant="contained"
+                    onClick={() => handleFilterClick("WARN")}
+                  >
+                    Warning
+                  </Button>
+                  <Button
+                    sx={{
+                      borderRadius: "20px",
+                      height: 36,
+                      minWidth: { xs: 84, sm: 96 },
+                      backgroundColor: "#92b3b8",
+                      color: "white",
+                    }}
+                    size="small"
+                    variant="contained"
+                    onClick={() => handleFilterClickResolved("UNRESOLVED")}
+                  >
+                    Unresolved
+                  </Button>
+                </Stack>
+
+                <Box>
+                  <input
+                    type="date"
+                    className="border p-2 rounded-md"
+                    value={selectedDate}
+                    onChange={handleFilterDate}
+                    style={{ height: 36 }}
+                  />
+                </Box>
+              </Stack>
+            </Stack>
           </Box>
-          <div className="flex items-center justify-between">
-            <div className="flex gap-5">
-              <Button
-                sx={{
-                  borderRadius: "20px",
-                  height: "30px",
-                  width: "100px",
-                  backgroundColor: "#3b82f6",
-                  color: "white",
-                }}
-                size="medium"
-                variant="contained"
-                onClick={() => handleFilterClick("INFO")}
-              >
-                Info
-              </Button>
-              <Button
-                sx={{
-                  borderRadius: "20px",
-                  height: "30px",
-                  width: "100px",
-                  backgroundColor: "#ef4444",
-                  color: "white",
-                }}
-                size="medium"
-                variant="contained"
-                onClick={() => handleFilterClick("ERROR")}
-              >
-                Error
-              </Button>
-              <Button
-                sx={{
-                  borderRadius: "20px",
-                  height: "30px",
-                  width: "100px",
-                  backgroundColor: "#f59e0b",
-                  color: "white",
-                }}
-                size="medium"
-                variant="contained"
-                onClick={() => handleFilterClick("WARN")}
-              >
-                Warning
-              </Button>
-              <Button
-                sx={{
-                  borderRadius: "20px",
-                  height: "30px",
-                  width: "120px",
-                  backgroundColor: "#92b3b8",
-                  color: "white",
-                }}
-                size="medium"
-                variant="contained"
-                onClick={() => handleFilterClickResolved("UNRESOLVED")}
-              >
-                Unresolved
-              </Button>
-            </div>
-            <div className="pt-2">
-              <input type="date" className="border p-2 rounded-md mb-4" onChange={handleFilterDate} />
-            </div>
-          </div>
-          <TableContainer>
-            <Table sx={{ minWidth: 650 }}>
-              <TableHead>
-                <TableRow sx={{ backgroundColor: "#f1f5f9" }}>
-                  {tableHeaders.map((head) => (
-                    <TableCell
-                      key={head}
-                      align="center"
+          <TableContainer sx={{ overflowX: "auto" }}>
+            {!isSmallScreen ? (
+              <Table sx={{ minWidth: 650 }}>
+                <TableHead>
+                  <TableRow sx={{ backgroundColor: "#f1f5f9" }}>
+                    {tableHeaders.map((head) => (
+                      <TableCell
+                        key={head}
+                        align="center"
+                        sx={{
+                          fontWeight: "bold",
+                          color: "#1e293b",
+                          fontSize: "0.95rem",
+                          padding: "16px",
+                        }}
+                      >
+                        {head}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+
+                <TableBody>
+                  {filteredLogs.map((log, index) => (
+                    <TableRow
+                      key={log.id}
                       sx={{
-                        fontWeight: "bold",
-                        color: "#1e293b",
-                        fontSize: "0.95rem",
-                        padding: "16px",
+                        backgroundColor: index % 2 === 0 ? "#f8fafc" : "white",
+                        "&:hover": {
+                          backgroundColor: "#eff6ff",
+                          transition: "background-color 0.2s ease",
+                        },
                       }}
                     >
-                      {head}
-                    </TableCell>
+                      <TableCell align="center" sx={{ fontWeight: "500" }}>
+                        {log.id}
+                      </TableCell>
+                      <TableCell align="center">
+                        {formatDate(log.timestamp)}
+                      </TableCell>
+                      <TableCell align="center">
+                        {formatTime(log.timestamp)}
+                      </TableCell>
+                      <TableCell align="center">
+                        {(() => {
+                          const color = getSeverityColor(log.severity);
+                          return (
+                            <span
+                              className="severity-badge"
+                              style={{
+                                backgroundColor: color + "22",
+                                color: color,
+                                border: `1px solid ${color}`,
+                                padding: "4px 12px",
+                                borderRadius: "12px",
+                                fontWeight: "600",
+                                textTransform: "uppercase",
+                              }}
+                            >
+                              {log.severity}
+                            </span>
+                          );
+                        })()}
+                      </TableCell>
+                      <TableCell align="center" sx={{ fontWeight: "500" }}>
+                        {log.source}
+                      </TableCell>
+                      <TableCell align="left" sx={{ maxWidth: "300px" }}>
+                        <span
+                          title={log.message}
+                          style={{
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            display: "block",
+                          }}
+                        >
+                          {log.message}
+                        </span>
+                      </TableCell>
+                      <TableCell align="center">
+                        <Button
+                          onClick={() => handleView(log.id)}
+                          variant="contained"
+                          size="small"
+                          sx={{
+                            backgroundColor: "#0284c7",
+                            "&:hover": { backgroundColor: "#0369a1" },
+                            textTransform: "none",
+                          }}
+                          startIcon={<MdPreview />}
+                        >
+                          View
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </TableRow>
-              </TableHead>
-
-              <TableBody>
-                {filteredLogs.map((log, index) => (
-                  <TableRow
-                    key={log.id}
-                    sx={{
-                      backgroundColor: index % 2 === 0 ? "#f8fafc" : "white",
-                      "&:hover": {
-                        backgroundColor: "#eff6ff",
-                        transition: "background-color 0.2s ease",
-                      },
-                    }}
-                  >
-                    <TableCell align="center" sx={{ fontWeight: "500" }}>
-                      {log.id}
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatDate(log.timestamp)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {formatTime(log.timestamp)}
-                    </TableCell>
-                    <TableCell align="center">
-                      {(() => {
-                        const color = getSeverityColor(log.severity);
-                        return (
+                </TableBody>
+              </Table>
+            ) : (
+              <Box sx={{ p: 2 }}>
+                {filteredLogs.map((log) => {
+                  const color = getSeverityColor(log.severity);
+                  return (
+                    <Box
+                      key={log.id}
+                      sx={{
+                        border: "1px solid #e5e7eb",
+                        borderRadius: 2,
+                        p: 2,
+                        mb: 2,
+                        backgroundColor: "white",
+                      }}
+                    >
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <div className="font-semibold">{log.id}</div>
+                          <div className="text-sm text-gray-600">
+                            {formatDate(log.timestamp)} •{" "}
+                            {formatTime(log.timestamp)}
+                          </div>
+                        </div>
+                        <div>
                           <span
-                            className="severity-badge"
                             style={{
                               backgroundColor: color + "22",
                               color: color,
                               border: `1px solid ${color}`,
-                              padding: "4px 12px",
-                              borderRadius: "12px",
-                              fontWeight: "600",
+                              padding: "4px 10px",
+                              borderRadius: 12,
+                              fontWeight: 600,
                               textTransform: "uppercase",
                             }}
                           >
                             {log.severity}
                           </span>
-                        );
-                      })()}
-                    </TableCell>
-                    <TableCell align="center" sx={{ fontWeight: "500" }}>
-                      {log.source}
-                    </TableCell>
-                    <TableCell align="left" sx={{ maxWidth: "300px" }}>
-                      <span
+                        </div>
+                      </div>
+                      <div className="mt-2 text-sm font-medium">
+                        {log.source}
+                      </div>
+                      <div
+                        className="mt-2 text-sm text-gray-700 truncate"
+                        style={{ maxWidth: "100%" }}
                         title={log.message}
-                        style={{
-                          overflow: "hidden",
-                          textOverflow: "ellipsis",
-                          whiteSpace: "nowrap",
-                          display: "block",
-                        }}
                       >
                         {log.message}
-                      </span>
-                    </TableCell>
-                    <TableCell align="center">
-                      <Button
-                        onClick={() => handleView(log.id)}
-                        variant="contained"
-                        size="small"
-                        sx={{
-                          backgroundColor: "#0284c7",
-                          "&:hover": { backgroundColor: "#0369a1" },
-                          textTransform: "none",
-                        }}
-                        startIcon={<MdPreview />}
-                      >
-                        View
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                      </div>
+                      <div className="mt-3 flex justify-end">
+                        <Button
+                          onClick={() => handleView(log.id)}
+                          variant="contained"
+                          size="small"
+                          sx={{
+                            backgroundColor: "#0284c7",
+                            "&:hover": { backgroundColor: "#0369a1" },
+                            textTransform: "none",
+                          }}
+                          startIcon={<MdPreview />}
+                        >
+                          View
+                        </Button>
+                      </div>
+                    </Box>
+                  );
+                })}
+              </Box>
+            )}
           </TableContainer>
         </Box>
       </Box>
