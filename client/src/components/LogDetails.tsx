@@ -1,8 +1,8 @@
 
-import { useContext, useMemo, useCallback } from "react";
+import { useContext, useMemo, useCallback, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { LogContext } from "../Context";
-import { Box, Button, Chip } from "@mui/material";
+import { Box, Button, Chip, Dialog, DialogTitle, DialogContent, DialogActions } from "@mui/material";
 import { IoArrowBack } from "react-icons/io5";
 import {
   FiSearch,
@@ -17,15 +17,42 @@ import {
   FiZap,
   FiUser,
   FiCheck,
+  FiLogOut,
 } from "react-icons/fi";
 
 const LogDetails = () => {
   const context = useContext(LogContext);
   const navigate = useNavigate();
+  const [openStatusDialog, setOpenStatusDialog] = useState(false);
 
   if (!context) return null;
 
-  const { selectedLog } = context;
+  const { selectedLog, userRole, setUserRole } = context;
+
+  // Viewer role cannot access details
+  if (userRole === "viewer") {
+    return (
+      <Box className="min-h-screen gradient-header flex items-center justify-center p-4">
+        <Box className="bg-white rounded-lg shadow-lg p-8 text-center">
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">Access Denied</h2>
+          <p className="text-gray-600 mb-6">
+            Your role (Viewer) does not have permission to view log details. You can only view the log table.
+          </p>
+          <Button
+            onClick={() => navigate("/logs")}
+            variant="contained"
+            startIcon={<IoArrowBack />}
+            sx={{
+              backgroundColor: "#1e40af",
+              "&:hover": { backgroundColor: "#1e3a8a" },
+            }}
+          >
+            Back to Logs
+          </Button>
+        </Box>
+      </Box>
+    );
+  }
 
   if (!selectedLog) {
     return (
@@ -70,6 +97,25 @@ const LogDetails = () => {
 
   const severityStyle = getSeverityColor(selectedLog.severity);
 
+  const handleOpenStatusDialog = () => {
+    setOpenStatusDialog(true);
+  };
+
+  const handleCloseStatusDialog = () => {
+    setOpenStatusDialog(false);
+  };
+
+  const handleStatusUpdate = (newStatus: boolean) => {
+    // Update the log status - in a real app, this would call an API
+    selectedLog.resolved = newStatus;
+    setOpenStatusDialog(false);
+  };
+
+  const handleLogout = () => {
+    setUserRole(null);
+    navigate("/");
+  };
+
   const DetailRow = ({ label, value, icon: Icon }: { label: string; value: string | boolean; icon?: React.ReactNode }) => (
     <Box className="flex items-center justify-between py-3 px-4 border-b border-gray-200 last:border-b-0 hover:bg-gray-50">
       <Box className="flex items-center gap-3 text-gray-700 font-medium">
@@ -94,7 +140,7 @@ const LogDetails = () => {
   return (
     <Box className="min-h-screen gradient-header p-6">
       <Box className="max-w-4xl mx-auto">
-        <Box className="flex items-center justify-between mb-6">
+        <Box className="flex items-center justify-between mb-6 gap-4 flex-wrap">
           <Button
             onClick={() => navigate("/logs")}
             variant="contained"
@@ -111,6 +157,20 @@ const LogDetails = () => {
           <span className="text-white text-sm font-medium flex items-center gap-2">
             <FiClock /> {formattedDate}
           </span>
+          <Button
+            onClick={handleLogout}
+            variant="contained"
+            sx={{
+              backgroundColor: "#ffffff",
+              color: "#1e40af",
+              fontWeight: "bold",
+              textTransform: "none",
+              "&:hover": { backgroundColor: "#f0f9ff" },
+            }}
+            endIcon={<FiLogOut />}
+          >
+            Logout
+          </Button>
         </Box>
 
         <Box className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -172,10 +232,89 @@ const LogDetails = () => {
             </Box>
             <Box>
               <DetailRow label="User" value={selectedLog.user || "N/A"} icon={<FiUser />} />
-              <DetailRow label="Status" value={selectedLog.resolved} icon={selectedLog.resolved ? <FiCheck className="text-green-600" /> : <FiTag className="text-orange-600" />} />
+              <Box className="flex items-center justify-between py-3 px-4 border-b border-gray-200 hover:bg-gray-50">
+                <Box className="flex items-center gap-3 text-gray-700 font-medium">
+                  <span className="text-blue-600 text-lg">{selectedLog.resolved ? <FiCheck className="text-green-600" /> : <FiTag className="text-orange-600" />}</span>
+                  Status
+                </Box>
+                <Box className="flex items-center gap-3">
+                  <Chip
+                    label={selectedLog.resolved ? "Resolved" : "Unresolved"}
+                    color={selectedLog.resolved ? "success" : "error"}
+                    size="small"
+                    variant="outlined"
+                  />
+                  {userRole === "admin" && (
+                    <Button
+                      onClick={handleOpenStatusDialog}
+                      variant="contained"
+                      size="small"
+                      sx={{
+                        backgroundColor: "#1e40af",
+                        "&:hover": { backgroundColor: "#1e3a8a" },
+                        textTransform: "none",
+                        fontSize: "0.875rem",
+                      }}
+                    >
+                      Update
+                    </Button>
+                  )}
+                </Box>
+              </Box>
             </Box>
           </Box>
         </Box>
+
+        {/* Status Update Dialog */}
+        <Dialog open={openStatusDialog} onClose={handleCloseStatusDialog} maxWidth="sm" fullWidth>
+          <DialogTitle sx={{ fontWeight: "bold", fontSize: "1.25rem" }}>
+            Update Log Status
+          </DialogTitle>
+          <DialogContent sx={{ py: 3 }}>
+            <Box sx={{ mb: 2 }}>
+              <p className="text-gray-700 mb-4">
+                Current Status: <strong>{selectedLog.resolved ? "Resolved" : "Unresolved"}</strong>
+              </p>
+              <p className="text-gray-600 text-sm">
+                Select the new status for this log:
+              </p>
+            </Box>
+            <Box sx={{ display: "flex", gap: 2 }}>
+              <Button
+                onClick={() => handleStatusUpdate(false)}
+                variant={selectedLog.resolved === false ? "contained" : "outlined"}
+                color="error"
+                fullWidth
+                sx={{
+                  fontWeight: "bold",
+                }}
+              >
+                Mark as Unresolved
+              </Button>
+              <Button
+                onClick={() => handleStatusUpdate(true)}
+                variant={selectedLog.resolved === true ? "contained" : "outlined"}
+                color="success"
+                fullWidth
+                sx={{
+                  fontWeight: "bold",
+                }}
+              >
+                Mark as Resolved
+              </Button>
+            </Box>
+          </DialogContent>
+          <DialogActions sx={{ p: 2 }}>
+            <Button
+              onClick={handleCloseStatusDialog}
+              sx={{
+                color: "#1e40af",
+              }}
+            >
+              Cancel
+            </Button>
+          </DialogActions>
+        </Dialog>
       </Box>
     </Box>
   );

@@ -3,6 +3,7 @@ import { useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { MdPreview } from "react-icons/md";
 import { LuLogs } from "react-icons/lu";
+import { FiLogOut } from "react-icons/fi";
 import { useState } from "react";
 import {
   Button,
@@ -17,6 +18,7 @@ import {
   useTheme,
   useMediaQuery,
   Stack,
+  Pagination,
 } from "@mui/material";
 import { LogContext } from "../Context";
 
@@ -26,7 +28,7 @@ function LogsTable() {
 
   if (!context) return null;
 
-  const { logs, setSelectedLog } = context;
+  const { logs, setSelectedLog, userRole, setUserRole } = context;
   const theme = useTheme();
   const isSmallScreen = useMediaQuery(theme.breakpoints.down("md"));
 
@@ -52,8 +54,10 @@ function LogsTable() {
   );
 
   const tableHeaders = useMemo(
-    () => ["Id", "Date", "Time", "Logs Level", "Source", "Message", "Action"],
-    [],
+    () => userRole === "viewer" 
+      ? ["Id", "Date", "Time", "Logs Level", "Source", "Message"]
+      : ["Id", "Date", "Time", "Logs Level", "Source", "Message", "Action"],
+    [userRole],
   );
 
   const getSeverityColor = useCallback((severity: string) => {
@@ -73,21 +77,27 @@ function LogsTable() {
 
   const [filterValue, setFilterValue] = useState("");
   const [selectedDate, setSelectedDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFilterValue(e.target.value);
+    setCurrentPage(1);
   };
 
   const handleFilterClick = (severity: string) => {
     setFilterValue(severity);
+    setCurrentPage(1);
   };
 
   const handleFilterClickResolved = (status: string) => {
     setFilterValue(status);
+    setCurrentPage(1);
   };
 
   const handleFilterDate = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSelectedDate(e.target.value);
+    setCurrentPage(1);
   };
 
   const formatToInputDate = useCallback((timestamp: string) => {
@@ -130,6 +140,23 @@ function LogsTable() {
 
     return items;
   }, [filterValue, selectedDate, logs, formatToInputDate]);
+
+  const totalPages = Math.ceil(filteredLogs.length / itemsPerPage);
+
+  const paginatedLogs = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filteredLogs.slice(startIndex, endIndex);
+  }, [filteredLogs, currentPage, itemsPerPage]);
+
+  const handlePageChange = (_event: React.ChangeEvent<unknown>, value: number) => {
+    setCurrentPage(value);
+  };
+
+  const handleLogout = () => {
+    setUserRole(null);
+    navigate("/");
+  };
 
   if (logs.length === 0) {
     return (
@@ -190,129 +217,150 @@ function LogsTable() {
       <Box className="max-w-7xl mx-auto">
         <Box className="bg-white rounded-lg shadow-lg overflow-hidden">
           <Box className="bg-gradient-to-r from-blue-900 to-blue-700 px-8 py-6">
-            <h1 className="text-3xl font-bold text-white flex items-center gap-3">
-              <span className="text-4xl">
-                <LuLogs className="text-white" />
-              </span>
-              IT System Logs Dashboard
-            </h1>
-            <p className="text-blue-100 mt-2">
-              Total Logs:{" "}
-              <span className="font-bold text-white">{logs.length}</span>
-            </p>
+            <Box className="flex items-center justify-between">
+              <div>
+                <h1 className="text-3xl font-bold text-white flex items-center gap-3">
+                  <span className="text-4xl">
+                    <LuLogs className="text-white" />
+                  </span>
+                  IT System Logs Dashboard
+                </h1>
+                <p className="text-blue-100 mt-2">
+                  Total Logs:{" "}
+                  <span className="font-bold text-white">{logs.length}</span>
+                </p>
+              </div>
+              <Button
+                onClick={handleLogout}
+                variant="contained"
+                sx={{
+                  backgroundColor: "#ffffff",
+                  color: "#1e40af",
+                  fontWeight: "bold",
+                  textTransform: "none",
+                  fontSize: "0.95rem",
+                  "&:hover": { backgroundColor: "#f0f9ff" },
+                }}
+                endIcon={<FiLogOut />}
+              >
+                Logout
+              </Button>
+            </Box>
           </Box>
 
-          <Box className="p-4 bg-gray-50 border-b border-gray-200">
-            <Stack
-              direction={{ xs: "column", md: "row" }}
-              spacing={2}
-              alignItems="center"
-              justifyContent="space-between"
-            >
-              <Box className="flex-1 min-w-0 w-full">
-                <TextField
-                  fullWidth
-                  label="Search Logs"
-                  placeholder="Type to search..."
-                  variant="outlined"
-                  value={filterValue}
-                  onChange={handleSearch}
-                  size="small"
-                  sx={{
-                    "& .MuiOutlinedInput-root": {
-                      backgroundColor: "white",
-                      "&:hover fieldset": {
-                        borderColor: "#1e40af",
-                      },
-                      "&.Mui-focused fieldset": {
-                        borderColor: "#1e40af",
-                      },
-                    },
-                  }}
-                />
-              </Box>
-
+          {userRole !== "viewer" && (
+            <Box className="p-4 bg-gray-50 border-b border-gray-200">
               <Stack
-                direction={{ xs: "column", sm: "row" }}
-                spacing={1}
+                direction={{ xs: "column", md: "row" }}
+                spacing={2}
                 alignItems="center"
+                justifyContent="space-between"
               >
-                <Stack
-                  direction="row"
-                  spacing={1}
-                  flexWrap="wrap"
-                  justifyContent={{
-                    xs: "flex-start",
-                    sm: "flex-start",
-                    md: "flex-start",
-                  }}
-                >
-                  <Button
-                    sx={{
-                      borderRadius: "20px",
-                      height: 36,
-                      minWidth: { xs: 72, sm: 84 },
-                    }}
+                <Box className="flex-1 min-w-0 w-full">
+                  <TextField
+                    fullWidth
+                    label="Search Logs"
+                    placeholder="Type to search..."
+                    variant="outlined"
+                    value={filterValue}
+                    onChange={handleSearch}
                     size="small"
-                    variant="contained"
-                    color="primary"
-                    onClick={() => handleFilterClick("INFO")}
-                  >
-                    Info
-                  </Button>
-                  <Button
                     sx={{
-                      borderRadius: "20px",
-                      height: 36,
-                      minWidth: { xs: 72, sm: 84 },
+                      "& .MuiOutlinedInput-root": {
+                        backgroundColor: "white",
+                        "&:hover fieldset": {
+                          borderColor: "#1e40af",
+                        },
+                        "&.Mui-focused fieldset": {
+                          borderColor: "#1e40af",
+                        },
+                      },
                     }}
-                    size="small"
-                    variant="contained"
-                    color="error"
-                    onClick={() => handleFilterClick("ERROR")}
-                  >
-                    Error
-                  </Button>
-                  <Button
-                    sx={{
-                      borderRadius: "20px",
-                      height: 36,
-                      minWidth: { xs: 72, sm: 84 },
-                    }}
-                    size="small"
-                    variant="contained"
-                    onClick={() => handleFilterClick("WARN")}
-                  >
-                    Warning
-                  </Button>
-                  <Button
-                    sx={{
-                      borderRadius: "20px",
-                      height: 36,
-                      minWidth: { xs: 84, sm: 96 },
-                      backgroundColor: "#92b3b8",
-                      color: "white",
-                    }}
-                    size="small"
-                    variant="contained"
-                    onClick={() => handleFilterClickResolved("UNRESOLVED")}
-                  >
-                    Unresolved
-                  </Button>
-                </Stack>
-
-                <Box>
-                  <input
-                    type="date"
-                    className="border p-2 rounded-md"
-                    value={selectedDate}
-                    onChange={handleFilterDate}
-                    style={{ height: 36 }}
                   />
                 </Box>
+
+                <Stack
+                  direction={{ xs: "column", sm: "row" }}
+                  spacing={1}
+                  alignItems="center"
+                >
+                  <Stack
+                    direction="row"
+                    spacing={1}
+                    flexWrap="wrap"
+                    justifyContent={{
+                      xs: "flex-start",
+                      sm: "flex-start",
+                      md: "flex-start",
+                    }}
+                  >
+                    <Button
+                      sx={{
+                        borderRadius: "20px",
+                        height: 36,
+                        minWidth: { xs: 72, sm: 84 },
+                      }}
+                      size="small"
+                      variant="contained"
+                      color="primary"
+                      onClick={() => handleFilterClick("INFO")}
+                    >
+                      Info
+                    </Button>
+                    <Button
+                      sx={{
+                        borderRadius: "20px",
+                        height: 36,
+                        minWidth: { xs: 72, sm: 84 },
+                      }}
+                      size="small"
+                      variant="contained"
+                      color="error"
+                      onClick={() => handleFilterClick("ERROR")}
+                    >
+                      Error
+                    </Button>
+                    <Button
+                      sx={{
+                        borderRadius: "20px",
+                        height: 36,
+                        minWidth: { xs: 72, sm: 84 },
+                      }}
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleFilterClick("WARN")}
+                    >
+                      Warning
+                    </Button>
+                    <Button
+                      sx={{
+                        borderRadius: "20px",
+                        height: 36,
+                        minWidth: { xs: 84, sm: 96 },
+                        backgroundColor: "#92b3b8",
+                        color: "white",
+                      }}
+                      size="small"
+                      variant="contained"
+                      onClick={() => handleFilterClickResolved("UNRESOLVED")}
+                    >
+                      Unresolved
+                    </Button>
+                  </Stack>
+
+                  <Box>
+                    <input
+                      type="date"
+                      className="border p-2 rounded-md"
+                      value={selectedDate}
+                      onChange={handleFilterDate}
+                      style={{ height: 36 }}
+                    />
+                  </Box>
+                </Stack>
               </Stack>
-            </Stack>
-          </Box>
+            </Box>
+          )}
           <TableContainer sx={{ overflowX: "auto" }}>
             {!isSmallScreen ? (
               <Table sx={{ minWidth: 650 }}>
@@ -336,7 +384,7 @@ function LogsTable() {
                 </TableHead>
 
                 <TableBody>
-                  {filteredLogs.map((log, index) => (
+                  {paginatedLogs.map((log, index) => (
                     <TableRow
                       key={log.id}
                       sx={{
@@ -393,28 +441,30 @@ function LogsTable() {
                           {log.message}
                         </span>
                       </TableCell>
-                      <TableCell align="center">
-                        <Button
-                          onClick={() => handleView(log.id)}
-                          variant="contained"
-                          size="small"
-                          sx={{
-                            backgroundColor: "#0284c7",
-                            "&:hover": { backgroundColor: "#0369a1" },
-                            textTransform: "none",
-                          }}
-                          startIcon={<MdPreview />}
-                        >
-                          View
-                        </Button>
-                      </TableCell>
+                      {userRole !== "viewer" && (
+                        <TableCell align="center">
+                          <Button
+                            onClick={() => handleView(log.id)}
+                            variant="contained"
+                            size="small"
+                            sx={{
+                              backgroundColor: "#0284c7",
+                              "&:hover": { backgroundColor: "#0369a1" },
+                              textTransform: "none",
+                            }}
+                            startIcon={<MdPreview />}
+                          >
+                            View
+                          </Button>
+                        </TableCell>
+                      )}
                     </TableRow>
                   ))}
                 </TableBody>
               </Table>
             ) : (
               <Box sx={{ p: 2 }}>
-                {filteredLogs.map((log) => {
+                {paginatedLogs.map((log) => {
                   const color = getSeverityColor(log.severity);
                   return (
                     <Box
@@ -461,27 +511,56 @@ function LogsTable() {
                       >
                         {log.message}
                       </div>
-                      <div className="mt-3 flex justify-end">
-                        <Button
-                          onClick={() => handleView(log.id)}
-                          variant="contained"
-                          size="small"
-                          sx={{
-                            backgroundColor: "#0284c7",
-                            "&:hover": { backgroundColor: "#0369a1" },
-                            textTransform: "none",
-                          }}
-                          startIcon={<MdPreview />}
-                        >
-                          View
-                        </Button>
-                      </div>
+                      {userRole !== "viewer" && (
+                        <div className="mt-3 flex justify-end">
+                          <Button
+                            onClick={() => handleView(log.id)}
+                            variant="contained"
+                            size="small"
+                            sx={{
+                              backgroundColor: "#0284c7",
+                              "&:hover": { backgroundColor: "#0369a1" },
+                              textTransform: "none",
+                            }}
+                            startIcon={<MdPreview />}
+                          >
+                            View
+                          </Button>
+                        </div>
+                      )}
                     </Box>
                   );
                 })}
               </Box>
             )}
           </TableContainer>
+
+          {/* Pagination Controls */}
+          <Box
+            sx={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: 3,
+              py: 4,
+              borderTop: "1px solid #e5e7eb",
+            }}
+          >
+            <Box>
+              <span className="text-gray-600 font-medium">
+                Showing {filteredLogs.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1}-{Math.min(currentPage * itemsPerPage, filteredLogs.length)} of {filteredLogs.length} logs
+              </span>
+            </Box>
+            {totalPages > 1 && (
+              <Pagination
+                count={totalPages}
+                page={currentPage}
+                onChange={handlePageChange}
+                color="primary"
+                size="large"
+              />
+            )}
+          </Box>
         </Box>
       </Box>
     </Box>
